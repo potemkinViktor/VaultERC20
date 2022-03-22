@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
 contract Token is Ownable, ERC20, ERC20Burnable {
 
-    address public deployer;
     address public specialAddress;
     address public vault;
 
@@ -26,7 +25,6 @@ contract Token is Ownable, ERC20, ERC20Burnable {
     }
 
     constructor (address _vault) ERC20("Token1", "TKN1") {
-        deployer = msg.sender;
         vault = _vault;
         whitelist[msg.sender] = true;
     }
@@ -67,30 +65,31 @@ contract Token is Ownable, ERC20, ERC20Burnable {
         _mint(account, amount);
     }
 
-    function transferWithCommission(address to, uint256 amount) public virtual returns (bool) {
-        address _msgSender = msg.sender;
-        require(!isBlacklisted(_msgSender), "Address in the blacklist");
-        if(isWhitelisted(_msgSender)) {
-            transfer(to, amount);
-        } else {
-            uint256 comission = amount * 5 / 100;
-            amount -= comission;
-            transfer(to, amount);
-            transfer(vault, comission);
-        }
+    function transfer(address to, uint256 amount) public virtual override returns (bool) {
+        address owner = _msgSender();
+        transferWithComission(owner, to, amount);
         return true;
     }
 
-    function transferFromWithCommission(address from, address to, uint256 amount) public virtual returns (bool) {
+    function transferFrom(address from, address to, uint256 amount) public virtual override returns (bool) {
+        address spender = _msgSender();
+        _spendAllowance(from, spender, amount);
+        transferWithComission(from, to, amount);
+        return true;
+    }
+
+
+    function transferWithComission(address from, address to, uint256 amount) internal virtual returns(bool) {
         require(!isBlacklisted(from), "Address in the blacklist");
         if(isWhitelisted(from)) {
-            transferFrom(from, to, amount);
+             _transfer(from, to, amount);
         } else {
             uint256 comission = amount * 5 / 100;
             amount -= comission;
-            transferFrom(from, to, amount);
-            transferFrom(from, vault, comission);
+            _transfer(from, to, amount);
+            _transfer(from, vault, comission);
         }
         return true;
     }
+    
 }
