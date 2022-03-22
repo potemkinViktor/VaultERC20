@@ -2,15 +2,11 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract Vault is Ownable {
-    address public ownerVault;
+abstract contract Vault is Ownable, IERC20 {
 
-    constructor() {
-        ownerVault = msg.sender;
-    }
-
-    function withdraw(uint256 _amount) public onlyOwner {
-       payable(ownerVault).transfer(_amount);
+    function withdraw(address to, uint256 _amount) public onlyOwner {
+       owner.transfer(to, _amount);
     }
 }
