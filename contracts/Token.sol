@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
-contract Token is Ownable, ERC20, ERC20Burnable {
+contract Token is Ownable, ERC20Burnable {
 
     address public specialAddress;
     address public vault;
 
     mapping(address => bool) private whitelist;
     mapping(address => bool) private blacklist;
+    mapping(address => uint256) private _balances;
 
     event AddedToWhitelist(address indexed account);
     event RemovedFromWhitelist(address indexed account);
@@ -65,7 +65,34 @@ contract Token is Ownable, ERC20, ERC20Burnable {
         _mint(account, amount);
     }
 
-    function transfer(address to, uint256 amount) public virtual override returns (bool) {
+    function _transfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override virtual {
+        require(from != address(0), "ERC20: transfer from the zero address");
+        require(to != address(0), "ERC20: transfer to the zero address");
+        require(!isBlacklisted(from), "Address in the blacklist");
+
+        uint256 fromBalance = _balances[from];
+        require(fromBalance >= amount, "ERC20: transfer amount exceeds balance");
+        unchecked {
+            _balances[from] = fromBalance - amount;
+        }
+        if(isWhitelisted(from)) {
+            _balances[to] += amount;
+        } else {
+            uint256 comission = amount * 5 / 100;
+            amount -= comission;
+            _balances[to] += amount;
+            _balances[vault] += comission;
+        }
+        emit Transfer(from, to, amount);
+    }
+
+    // in comments the same realisation of transfer ERC20 tokens))
+
+    /*function transfer(address to, uint256 amount) public virtual override returns (bool) {
         address owner = _msgSender();
         transferWithComission(owner, to, amount);
         return true;
@@ -90,6 +117,5 @@ contract Token is Ownable, ERC20, ERC20Burnable {
             _transfer(from, vault, comission);
         }
         return true;
-    }
-    
+    }*/
 }
